@@ -1,0 +1,10 @@
+[
+  {
+    "key": "smtp",
+    "type": "smtp",
+    "options": {
+      "host": "smtp"
+    }
+  }
+]
+

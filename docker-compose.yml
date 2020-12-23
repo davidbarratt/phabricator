@@ -1,0 +1,77 @@
+version: '3'
+services:
+  phabricator:
+    image: phabricator/phabricator:stable
+    restart: always
+    links:
+      - db
+      - notifications
+    volumes:
+       - ./preamble.php:/var/www/phabricator/support/preamble.php
+       - config:/var/www/phabricator/conf
+       - files:/var/www/files
+    networks:
+      - default
+      - ingress
+    environment:
+      VIRTUAL_HOST: phabricator.davidwbarratt.com,phabricator-files.davidwbarratt.com
+      LETSENCRYPT_HOST: phabricator.davidwbarratt.com,phabricator-files.davidwbarratt.com
+  daemon:
+    image: phabricator/daemon:stable
+    restart: always
+    links:
+      - db
+      - notifications
+    volumes:
+       - config:/var/www/phabricator/conf
+       - files:/var/www/files
+  notifications:
+    image: phabricator/aphlict:stable
+    restart: always
+    environment:
+      VIRTUAL_HOST: 'phabricator-notifications.davidwbarratt.com'
+      VIRTUAL_PORT: '22280'
+      LETSENCRYPT_HOST: 'phabricator-notifications.davidwbarratt.com'
+    links:
+      - db
+    networks:
+      - default
+      - ingress
+    expose:
+      - '22281'
+    volumes:
+      - config:/var/www/phabricator/conf
+      - files:/var/www/files
+  db:
+    image: davidbarratt/phabricator-db
+    restart: always
+    volumes:
+      - database:/var/lib/mysql
+  backup:
+    image: davidbarratt/cron
+    restart: always
+    environment:
+      CRONTAB: '45 * * * * /var/bin/backup.sh'
+    links:
+     - db
+     - phabricator
+    volumes:
+     - ./backup.sh:/var/bin/backup.sh
+     - database-backup:/backup
+  onedrive:
+    image: onedrivejs/onedrive
+    env_file:
+      - '.env'
+    volumes:
+      - config:/data/Phabricator/config
+      - files:/data/Phabricator/files
+      - database-backup:/data/Phabricator/database
+volumes:
+  config:
+  files:
+  database:
+  database-backup:
+networks:
+  ingress:
+    external:
+      name: ingress
